@@ -1,0 +1,479 @@
+import React, { useMemo, useState } from "react";
+import { createRoot } from "react-dom/client";
+import {
+  LayoutDashboard,
+  Lock,
+  Minus,
+  PackageCheck,
+  Plus,
+  Search,
+  ShoppingBag,
+  ShoppingCart,
+  Trash2,
+} from "lucide-react";
+import "./styles.css";
+
+const products = [
+  {
+    id: 1,
+    name: "Apple",
+    category: "Fruits",
+    price: 180,
+    unit: "1 kg",
+    image: "/images/apple.jpg",
+    detail: "Fresh red apples selected for daily family snacks and juice.",
+  },
+  {
+    id: 2,
+    name: "Banana",
+    category: "Fruits",
+    price: 120,
+    unit: "1 dozen",
+    image: "/images/banana.png",
+    detail: "Sweet ripe bananas packed carefully for home delivery.",
+  },
+  {
+    id: 3,
+    name: "Milk",
+    category: "Dairy",
+    price: 95,
+    unit: "1 litre",
+    image: "/images/milk.png",
+    detail: "Fresh dairy milk for tea, breakfast, and cooking.",
+  },
+  {
+    id: 4,
+    name: "Rice",
+    category: "Grocery",
+    price: 1550,
+    unit: "25 kg",
+    image: "/images/rice.png",
+    detail: "Premium everyday rice with clean grains and soft texture.",
+  },
+  {
+    id: 5,
+    name: "Tomato",
+    category: "Vegetables",
+    price: 85,
+    unit: "1 kg",
+    image: "/images/tomato.png",
+    detail: "Juicy tomatoes for curry, salad, soup, and chutney.",
+  },
+  {
+    id: 6,
+    name: "Bread",
+    category: "Bakery",
+    price: 70,
+    unit: "1 pack",
+    image: "/images/bread.png",
+    detail: "Soft bakery bread, ready for toast and sandwiches.",
+  },
+];
+
+const currency = new Intl.NumberFormat("en-NP", {
+  style: "currency",
+  currency: "NPR",
+  maximumFractionDigits: 0,
+});
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
+
+function App() {
+  const [page, setPage] = useState("home");
+  const [query, setQuery] = useState("");
+  const [cart, setCart] = useState([]);
+  const [notice, setNotice] = useState("");
+
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const filteredProducts = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return products;
+    return products.filter((product) =>
+      [product.name, product.category, product.detail].join(" ").toLowerCase().includes(normalized)
+    );
+  }, [query]);
+
+  function addToCart(product) {
+    setCart((current) => {
+      const existing = current.find((item) => item.productId === product.id);
+      if (existing) {
+        return current.map((item) =>
+          item.productId === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+
+      return [
+        ...current,
+        {
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          quantity: 1,
+        },
+      ];
+    });
+    setNotice(`${product.name} added to cart`);
+  }
+
+  function updateQuantity(productId, quantity) {
+    setCart((current) =>
+      current
+        .map((item) =>
+          item.productId === productId ? { ...item, quantity: Math.max(1, Number(quantity) || 1) } : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  }
+
+  function removeItem(productId) {
+    setCart((current) => current.filter((item) => item.productId !== productId));
+  }
+
+  return (
+    <div className="app-shell">
+      <header className="topbar">
+        <button className="brand" onClick={() => setPage("home")}>
+          <ShoppingBag size={24} />
+          <span>Langhali Mart</span>
+        </button>
+        <nav>
+          <button className={page === "home" ? "active" : ""} onClick={() => setPage("home")}>
+            Home
+          </button>
+          <button className={page === "cart" ? "active cart-link" : "cart-link"} onClick={() => setPage("cart")}>
+            <ShoppingCart size={18} />
+            Cart
+            <span>{cartCount}</span>
+          </button>
+          <button className={page === "admin" ? "active" : ""} onClick={() => setPage("admin")}>
+            Admin
+          </button>
+        </nav>
+      </header>
+
+      {page === "home" && (
+        <HomePage
+          addToCart={addToCart}
+          filteredProducts={filteredProducts}
+          notice={notice}
+          query={query}
+          setPage={setPage}
+          setQuery={setQuery}
+        />
+      )}
+
+      {page === "cart" && (
+        <CartPage
+          cart={cart}
+          removeItem={removeItem}
+          setCart={setCart}
+          setPage={setPage}
+          updateQuantity={updateQuantity}
+        />
+      )}
+
+      {page === "admin" && <AdminPage />}
+    </div>
+  );
+}
+
+function HomePage({ addToCart, filteredProducts, notice, query, setPage, setQuery }) {
+  return (
+    <main>
+      <section className="hero">
+        <div className="hero-copy">
+          <span className="eyebrow">Fresh groceries, neat checkout</span>
+          <h1>Langhali Mart</h1>
+          <p>Shop fruits, dairy, bakery, and daily essentials with a clean cart and order tracking flow.</p>
+          <div className="search-wrap">
+            <Search size={20} />
+            <input
+              aria-label="Search products"
+              placeholder="Search apple, milk, rice..."
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          {notice && <p className="notice">{notice}</p>}
+        </div>
+        <div className="hero-visual">
+          <img src="/images/apple.png" alt="Apple" />
+          <div>
+            <strong>Fast basket</strong>
+            <span>Quantity controls and saved orders</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="products-head">
+        <div>
+          <h2>Products</h2>
+          <p>{filteredProducts.length} products available</p>
+        </div>
+        <button className="primary" onClick={() => setPage("cart")}>
+          <ShoppingCart size={18} />
+          View cart
+        </button>
+      </section>
+
+      <section className="product-grid">
+        {filteredProducts.map((product) => (
+          <article className="product-card" key={product.id}>
+            <div className="product-image">
+              <img src={product.image} alt={product.name} />
+            </div>
+            <div className="product-info">
+              <div>
+                <span>{product.category}</span>
+                <h3>{product.name}</h3>
+                <p>{product.detail}</p>
+              </div>
+              <div className="product-bottom">
+                <div>
+                  <strong>{currency.format(product.price)}</strong>
+                  <small>{product.unit}</small>
+                </div>
+                <button className="primary" onClick={() => addToCart(product)}>
+                  <Plus size={18} />
+                  Add
+                </button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </section>
+    </main>
+  );
+}
+
+function CartPage({ cart, removeItem, setCart, setPage, updateQuantity }) {
+  const [form, setForm] = useState({ customerName: "", phone: "", address: "" });
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  function updateField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function placeOrder(event) {
+    event.preventDefault();
+    setSaving(true);
+    setMessage("");
+
+    try {
+      const response = await fetch(`${API_URL}/api/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, items: cart }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.message || "Could not place order.");
+
+      setCart([]);
+      setForm({ customerName: "", phone: "", address: "" });
+      setMessage(`Order placed successfully. Order ID: ${data._id}`);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <main className="cart-layout">
+      <section className="cart-panel">
+        <div className="section-title">
+          <h1>Your Cart</h1>
+          <p>Edit quantity, remove products, then submit your delivery details.</p>
+        </div>
+
+        {cart.length === 0 ? (
+          <div className="empty-state">
+            <PackageCheck size={42} />
+            <h2>Your cart is empty</h2>
+            <button className="primary" onClick={() => setPage("home")}>
+              Continue shopping
+            </button>
+          </div>
+        ) : (
+          <div className="cart-items">
+            {cart.map((item) => (
+              <article className="cart-item" key={item.productId}>
+                <img src={item.image} alt={item.name} />
+                <div>
+                  <h3>{item.name}</h3>
+                  <p>{currency.format(item.price)} each</p>
+                </div>
+                <div className="qty">
+                  <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} aria-label="Decrease quantity">
+                    <Minus size={16} />
+                  </button>
+                  <input
+                    aria-label={`${item.name} quantity`}
+                    type="number"
+                    min="1"
+                    value={item.quantity}
+                    onChange={(event) => updateQuantity(item.productId, event.target.value)}
+                  />
+                  <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} aria-label="Increase quantity">
+                    <Plus size={16} />
+                  </button>
+                </div>
+                <strong>{currency.format(item.price * item.quantity)}</strong>
+                <button className="icon-danger" onClick={() => removeItem(item.productId)} aria-label={`Remove ${item.name}`}>
+                  <Trash2 size={18} />
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <aside className="checkout-panel">
+        <h2>Order Details</h2>
+        <div className="total-row">
+          <span>Total</span>
+          <strong>{currency.format(total)}</strong>
+        </div>
+        <form onSubmit={placeOrder}>
+          <label>
+            Name
+            <input required value={form.customerName} onChange={(event) => updateField("customerName", event.target.value)} />
+          </label>
+          <label>
+            Phone no
+            <input required value={form.phone} onChange={(event) => updateField("phone", event.target.value)} />
+          </label>
+          <label>
+            Address
+            <textarea required value={form.address} onChange={(event) => updateField("address", event.target.value)} />
+          </label>
+          <button className="primary wide" disabled={saving || cart.length === 0}>
+            {saving ? "Placing..." : "Place order"}
+          </button>
+        </form>
+        {message && <p className="form-message">{message}</p>}
+      </aside>
+    </main>
+  );
+}
+
+function AdminPage() {
+  const [password, setPassword] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [message, setMessage] = useState("");
+
+  async function loadOrders(nextPassword = password) {
+    setMessage("");
+    try {
+      const response = await fetch(`${API_URL}/api/orders`, {
+        headers: { "x-admin-password": nextPassword },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to load orders.");
+      setOrders(data);
+      setUnlocked(true);
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  async function updateOrder(order) {
+    const response = await fetch(`${API_URL}/api/orders/${order._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      body: JSON.stringify(order),
+    });
+    if (response.ok) loadOrders();
+  }
+
+  async function deleteOrder(id) {
+    const response = await fetch(`${API_URL}/api/orders/${id}`, {
+      method: "DELETE",
+      headers: { "x-admin-password": password },
+    });
+    if (response.ok) setOrders((current) => current.filter((order) => order._id !== id));
+  }
+
+  function changeOrder(id, field, value) {
+    setOrders((current) => current.map((order) => (order._id === id ? { ...order, [field]: value } : order)));
+  }
+
+  return (
+    <main className="admin-page">
+      <section className="admin-lock">
+        <div>
+          <Lock size={24} />
+          <h1>Admin Orders</h1>
+          <p>Enter password to open all customer order details.</p>
+        </div>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            loadOrders(password);
+          }}
+        >
+          <input
+            aria-label="Admin password"
+            placeholder="Password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <button className="primary">Open</button>
+        </form>
+        {message && <p className="form-message">{message}</p>}
+      </section>
+
+      {unlocked && (
+        <section className="orders-list">
+          <div className="section-title">
+            <h2>Submitted Orders</h2>
+            <p>{orders.length} records in MongoDB</p>
+          </div>
+          {orders.map((order) => (
+            <article className="order-card" key={order._id}>
+              <div className="order-top">
+                <LayoutDashboard size={20} />
+                <strong>{order.customerName}</strong>
+                <span>{currency.format(order.total)}</span>
+              </div>
+              <div className="admin-fields">
+                <input value={order.customerName} onChange={(event) => changeOrder(order._id, "customerName", event.target.value)} />
+                <input value={order.phone} onChange={(event) => changeOrder(order._id, "phone", event.target.value)} />
+                <input value={order.address} onChange={(event) => changeOrder(order._id, "address", event.target.value)} />
+                <select value={order.status} onChange={(event) => changeOrder(order._id, "status", event.target.value)}>
+                  <option>Pending</option>
+                  <option>Confirmed</option>
+                  <option>Delivered</option>
+                  <option>Cancelled</option>
+                </select>
+              </div>
+              <div className="admin-products">
+                {order.items.map((item) => (
+                  <span key={`${order._id}-${item.productId}`}>
+                    {item.name} x {item.quantity}
+                  </span>
+                ))}
+              </div>
+              <div className="order-actions">
+                <button className="primary" onClick={() => updateOrder(order)}>
+                  Save edit
+                </button>
+                <button className="danger" onClick={() => deleteOrder(order._id)}>
+                  Delete
+                </button>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
+    </main>
+  );
+}
+
+createRoot(document.getElementById("root")).render(<App />);
