@@ -75,9 +75,8 @@ const currency = new Intl.NumberFormat("en-NP", {
   currency: "NPR",
   maximumFractionDigits: 0,
 });
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://langhalimart-backend.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL || "ht;tp://127.0.0.1:5000"
+
 function App() {
   const [page, setPage] = useState("home");
   const [query, setQuery] = useState("");
